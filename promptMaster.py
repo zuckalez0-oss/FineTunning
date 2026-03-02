@@ -4,11 +4,13 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 from colorama import Fore, Style, init
+import typer
 
 
 load_dotenv()
 init(autoreset=True)
 console = Console()
+app = typer.Typer()
 
 #=====Configuração do cliente Gemini======
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -218,6 +220,7 @@ def mostrar_menu():
     table.add_row("5", "Gerar prompt para criação de conteúdo")
     table.add_row("0", "Sair")
     console.print(table)
+    
 
 print("Programa iniciado")
 if __name__ =="__main__":
