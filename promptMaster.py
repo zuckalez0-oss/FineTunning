@@ -1,20 +1,18 @@
 from google import genai
 import os
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.table import Table
+from colorama import Fore, Style, init
+
 
 load_dotenv()
+init(autoreset=True)
+console = Console()
 
-
-
+#=====Configuração do cliente Gemini======
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-##=====Configuração de cores para retorno no terminal======
-VERMELHO = "\033[91m"
-VERDE = "\033[92m"
-AMARELO = "\033[93m"
-AZUL = "\033[94m"
-RESET = "\033[0m"
-##==========================================================
 
 SISTEM_PROMPT_BUILD = """
 Você é um especialista em engenharia de prompts.
@@ -209,50 +207,55 @@ def gerar_prompt_conteudo(ideia_usuario):
         contents=f"{PROMPT_CONTEUDO}\n\nIdeia do usuário:{ideia_usuario}"
     )
     return resposta.text
+def mostrar_menu():
+    table = Table(title="🎯 PromptMaster")
+    table.add_column("Opção",style="cyan")
+    table.add_column("Descrição", style="magenta")
+    table.add_row("1", "Prompt para construção de conteúdo")
+    table.add_row("2", "Prompt para análise de dados")
+    table.add_row("3", "Prompt para aprendizado de máquina")
+    table.add_row("4", "Gerar texto criativo")
+    table.add_row("5", "Gerar prompt para criação de conteúdo")
+    table.add_row("0", "Sair")
+    console.print(table)
 
 print("Programa iniciado")
 if __name__ =="__main__":
     while True:
-        print("Sistema de Geração de Prompts Profissionais:")
-        print("Digite a opcao para o tipo de prompt que deseja gerar:")
-        print("1. Prompt para construção de conteúdo")
-        print("2. Prompt para análise de dados")
-        print("3. Prompt para aprendizado de máquina")
-        print("4. Gerar texto criativo")
-        print("5. Gerar prompt para criação de conteúdo")
-        print("0. Sair")
+        mostrar_menu()
+
         opcao = input("Escolha uma opção (1-5): ")
         match opcao:
             case "1":
                 ideia=input("Digite sua ideia para construção: ")
                 prompt_gerado = gerar_prompt_build(ideia)
-                print("\nPrompt Gerado:\n")
-                print(prompt_gerado)
+                console.print("\nPrompt Gerado:\n")
+                console.print(prompt_gerado)
             case "2":
                 ideia=input("Digite sua ideia para análise de dados: ")
                 prompt_gerado = gerar_prompt_analise_dados(ideia)
-                print("\nPrompt Gerado:\n")
-                print(prompt_gerado)
+                console.print("\nPrompt Gerado:\n")
+                console.print(prompt_gerado)
             case "3":
                 ideia=input("Digite sua ideia para aprendizado de máquina: ")
                 prompt_gerado = gerar_prompt_machine_learning(ideia)
-                print("\nPrompt Gerado:\n")
-                print(prompt_gerado)
+                console.print("\nPrompt Gerado:\n")
+                console.print(prompt_gerado)
             case "4":
                 ideia=input("Digite sua ideia para texto criativo: ")
                 prompt_gerado = gerar_prompt_texto_criativo(ideia)
-                print("\nPrompt Gerado:\n")
-                print(prompt_gerado)
+                console.print("\nPrompt Gerado:\n")
+                console.print(prompt_gerado)
             case "5":
                 ideia=input("Digite sua ideia para criação de conteúdo: ")
                 prompt_gerado = gerar_prompt_conteudo(ideia)
-                print("\nPrompt Gerado:\n")
-                print(prompt_gerado)
+                console.print("\nPrompt Gerado:\n")
+                console.print(prompt_gerado)
             case "0":
-                print(f"{AMARELO}Encerrando o programa.{RESET}")
+                console.print("[bold green]Encerrando o programa.[/bold green]")
                 break
             case _:
-                print(f"{VERMELHO}Opção inválida. Por favor, escolha uma opção entre 0 e 5.{RESET}")
+                console.print("[bold red]Opção inválida. Por favor, escolha uma opção entre 0 e 5.[/bold red]")
 
         
  

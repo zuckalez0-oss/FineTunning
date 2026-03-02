@@ -1,2 +1,22 @@
-.env/
-.promptMaster/
+# Arquivos de ambiente
+# Não suba sua chave de API para o repositório!
+.env
+
+# Diretório do ambiente virtual (venv)
+# O seu parece se chamar 'promptMaster'
+promptMaster/
+
+# Arquivos de cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Artefatos de build
+build/
+dist/
+*.egg-info/
+
+# Configurações de IDE
+.vscode/
+.idea/
