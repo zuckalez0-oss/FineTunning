@@ -1,20 +1,27 @@
-from google import genai
 import os
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 from colorama import Fore, Style, init
-import typer
+from google import genai
+from supabase import create_client, Client
+import datetime
 
+
+
+
+import typer
 
 load_dotenv()
 init(autoreset=True)
 console = Console()
-app = typer.Typer()
-
-#=====Configuração do cliente Gemini======
+app = typer.Typer() # verify
+#===== inicializando gemini ======
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
+##===== Inicializa Supabase ======
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+supabase:Client=create_client(SUPABASE_URL,SUPABASE_KEY)
 
 SISTEM_PROMPT_BUILD = """
 Você é um especialista em engenharia de prompts.
@@ -172,6 +179,7 @@ Nunca apenas entregue código sem contexto.
 Adapte profundidade conforme o nível informado.
 """
 PROMPT_CONTEUDO = """
+
 Você é um especialista em engenharia de prompts focado em criação de conteúdo.
 
 Transforme a ideia do usuário em um prompt profissional altamente estruturado.
@@ -206,6 +214,76 @@ Limitações de tamanho, linguagem ou regras específicas.
 Não explique nada fora do Markdown.
 """
 
+def iniciar_sessao_banco():
+    """Cria um usuario falso (para CLI) e inicia um novo projeto/sessao"""
+    email_cli="cli@promptmaster.local"
+
+    user_res = supabase.table("users").select("id").eq("email", email_cli).execute()
+    if not user_res.data:
+        user_res=supabase.table("users").insert({"email":email_cli}).execute()
+    user_id=user_res.data[0]["id"]
+
+    titulo = f"Sessão CLI - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    proj_res = supabase.table("projects").insert({
+        "user_id":user_id,
+        "title":titulo,
+        "memory_sumary":"Nenhum resumo ainda"
+    }).execute()
+
+    project_id=proj_res.data[0]["id"]
+    console.print(f"[bold green]Sessão iniciada com sucesso![/bold green] (ID: {project_id[:8]}...)")
+    return project_id, proj_res.data[0]["memory_sumary"]
+def salvar_mensagem(project_id:str, role:str, content:str):
+    """Salva a mensagem no banco de dados"""
+    supabase.table("promppts").insert({
+        "project_id":project_id,
+        "role":role,
+        "content":content
+    }).execute()
+def buscar_ultima_mensagem(project_id:str):
+    """Busca apenas a ultima troca de mensagens (User + Assistant) para economizar tokens e manter contexto recente"""
+    res = supabase.table("prompts").select("*").eq("project_id",project_id).order("created_at", desc=True).limit(2).execute()
+
+    if not res.data:
+        return "nenhuma interação anterior"
+    #inverter a ordem para ficar cronológica, (User --> Assistant)
+    mensagens = reversed(res.data)
+    contexto=""
+    for msg in mensagens:
+        papel = "Usuario" if msg["role"] == "user" else "IA"
+        contexto += f"{papel}: {msg['content']}\n"
+
+    return contexto
+def gerar_resposta_com_contexto(project_id, memory_sumary,system_prompt, ideia_usuario):
+    """
+    Aplica a regra da imagem:
+    1. Persona (System)
+    2. Memory Summary
+    3. Última interação
+    4. Nova instrução
+    """
+    ultima_interacao = buscar_ultima_mensagem(project_id)
+    prompt_final = f"""
+    [PERSONA ATIVA]
+    {system_prompt}
+
+    [RESUMO DA MEMÓRIA]
+    {memory_sumary}
+
+    [ÚLTIMA INTERAÇÃO RELEVANTE]
+    {ultima_interacao}
+
+    [NOVA INSTRUÇÃO]
+    {ideia_usuario}
+    """
+    resposta = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt_final
+    )
+    salvar_mensagem(project_id, "user", ideia_usuario)
+    salvar_mensagem(project_id, "assistant", resposta.text)
+    return resposta.text
 def gerar_prompt_build(ideia_usuario):
     resposta = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -237,7 +315,7 @@ def gerar_prompt_conteudo(ideia_usuario):
     )
     return resposta.text
 def mostrar_menu():
-    table = Table(title="🎯 PromptMaster")
+    table = Table(title="🎯 PromptMaster (Conectado ao DB)")
     table.add_column("Opção",style="cyan")
     table.add_column("Descrição", style="magenta")
     table.add_row("1", "Prompt para construção de aplicação (Completo)")
@@ -253,37 +331,58 @@ if __name__ =="__main__":
         mostrar_menu()
 
         opcao = input("Escolha uma opção (1-5): ")
-        match opcao:
-            case "1":
-                ideia=input("Digite sua ideia para construção: ")
-                prompt_gerado = gerar_prompt_build(ideia)
-                console.print("\nPrompt Gerado:\n")
-                console.print(prompt_gerado)
-            case "2":
-                ideia=input("Digite sua ideia para análise de dados: ")
-                prompt_gerado = gerar_prompt_analise_dados(ideia)
-                console.print("\nPrompt Gerado:\n")
-                console.print(prompt_gerado)
-            case "3":
-                ideia=input("Digite sua ideia para aprendizado de máquina: ")
-                prompt_gerado = gerar_prompt_sheetmaster(ideia)
-                console.print("\nPrompt Gerado:\n")
-                console.print(prompt_gerado)
-            case "4":
-                ideia=input("Digite sua ideia para professor de programação: ")
-                prompt_gerado = gerar_prompt_professor_programacao(ideia)
-                console.print("\nPrompt Gerado:\n")
-                console.print(prompt_gerado)
-            case "5":
-                ideia=input("Digite sua ideia para criação de conteúdo: ")
-                prompt_gerado = gerar_prompt_conteudo(ideia)
-                console.print("\nPrompt Gerado:\n")
-                console.print(prompt_gerado)
-            case "0":
-                console.print("[bold green]Encerrando o programa.[/bold green]")
-                break
-            case _:
-                console.print("[bold red]Opção inválida. Por favor, escolha uma opção entre 0 e 5.[/bold red]")
+        persona=""
+        if opcao == "1":
+            persona=SISTEM_PROMPT_BUILD
+        elif opcao == "2":
+            persona=PROMPT_ANALISE_DADOS
+        elif opcao == "3":
+            persona=PROMPT_ESPECIALISTA_SHEETS
+        elif opcao == "4":
+            persona=PROMPT_PROFESSOR_PROGRAMACAO
+        elif opcao == "5":
+            persona=PROMPT_CONTEUDO
+        elif opcao == "0":
+            console.print("[bold green]Encerrando o programa.[/bold green]")
+            break
+        else:
+            console.print("[bold red]Opção inválida. Por favor, escolha uma opção entre 0 e 5.[/bold red]")
+            continue
+        ideia = input("Digite sua ideia: ")
+        
+
+
+        # match opcao:
+        #     case "1":
+        #         ideia=input("Digite sua ideia para construção: ")
+        #         prompt_gerado = gerar_prompt_build(ideia)
+        #         console.print("\nPrompt Gerado:\n")
+        #         console.print(prompt_gerado)
+        #     case "2":
+        #         ideia=input("Digite sua ideia para análise de dados: ")
+        #         prompt_gerado = gerar_prompt_analise_dados(ideia)
+        #         console.print("\nPrompt Gerado:\n")
+        #         console.print(prompt_gerado)
+        #     case "3":
+        #         ideia=input("Digite sua ideia para aprendizado de máquina: ")
+        #         prompt_gerado = gerar_prompt_sheetmaster(ideia)
+        #         console.print("\nPrompt Gerado:\n")
+        #         console.print(prompt_gerado)
+        #     case "4":
+        #         ideia=input("Digite sua ideia para professor de programação: ")
+        #         prompt_gerado = gerar_prompt_professor_programacao(ideia)
+        #         console.print("\nPrompt Gerado:\n")
+        #         console.print(prompt_gerado)
+        #     case "5":
+        #         ideia=input("Digite sua ideia para criação de conteúdo: ")
+        #         prompt_gerado = gerar_prompt_conteudo(ideia)
+        #         console.print("\nPrompt Gerado:\n")
+        #         console.print(prompt_gerado)
+        #     case "0":
+        #         console.print("[bold green]Encerrando o programa.[/bold green]")
+        #         break
+        #     case _:
+        #         console.print("[bold red]Opção inválida. Por favor, escolha uma opção entre 0 e 5.[/bold red]")
 
         
  
