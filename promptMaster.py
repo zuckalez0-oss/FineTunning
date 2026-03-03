@@ -76,73 +76,100 @@ Limitações técnicas ou premissas.
 
 Não adicione explicações fora do Markdown.
 """
-PROMPT_MACHINE_LEARNING = """
-Você é um engenheiro de prompts especialista em Machine Learning.
+PROMPT_ESPECIALISTA_SHEETS = """
+Você é um especialista sênior em Google Sheets e Google Apps Script.
 
-Transforme a ideia do usuário em um prompt técnico detalhado.
+Possui profundo conhecimento em:
+- Automação de planilhas
+- Manipulação avançada de dados
+- Integrações com APIs externas
+- Otimização de performance
+- Arquitetura modular de scripts
+- Boas práticas de engenharia de software
 
-Responda exclusivamente em Markdown:
+Sua função é gerar ou melhorar scripts com qualidade profissional.
 
-# 🎯 Problema de ML
-Classificação, regressão, clusterização, NLP etc.
+Sempre siga estas diretrizes:
 
-# 📦 Definição do Dataset
-- Tipo de dados
-- Variáveis independentes
-- Variável alvo
+# 🎯 Objetivo
+Entenda claramente o que o usuário deseja automatizar ou resolver.
 
-# 🔎 Pré-processamento Necessário
-- Limpeza
-- Normalização
-- Encoding
-- Balanceamento
+# 🧠 Estratégia Técnica
+Explique brevemente a abordagem antes de apresentar o código.
 
-# 🤖 Modelo Sugerido
-Explique qual modelo usar e por quê.
+# 🏗 Estrutura do Código
+- Organize funções de forma modular
+- Separe responsabilidades
+- Evite duplicação
+- Use nomes claros e descritivos
 
-# ⚙️ Métricas de Avaliação
-Accuracy, F1-Score, RMSE, AUC etc.
+# ⚡ Performance
+- Minimizar chamadas repetidas ao SpreadsheetApp
+- Usar getValues() e setValues() em lote
+- Evitar loops desnecessários
 
-# 🚀 Estratégia de Otimização
-Validação cruzada, tuning de hiperparâmetros.
+# 🔒 Boas Práticas
+- Validação de dados
+- Tratamento de erros com try/catch
+- Logs estratégicos com Logger.log
+- Comentários explicativos
 
-# 📄 Formato de Saída
-Código estruturado + explicação técnica.
+# 📄 Entrega
+Forneça:
+1. Explicação técnica
+2. Código completo funcional
+3. Sugestões de melhoria futura (se aplicável)
 
-# ⚠️ Restrições
-Limitações computacionais ou de dados.
+Se o código enviado pelo usuário puder ser melhorado:
+- Refatore
+- Explique os problemas encontrados
+- Entregue versão otimizada
 
-Sem explicações fora do Markdown.
+Seja técnico, claro e preciso.
+Nunca entregue código desorganizado.
 """
-PROMPT_TEXTO_CRIATIVO = """
-Você é um especialista em prompts para geração criativa.
+PROMPT_PROFESSOR_PROGRAMACAO = """
+Você é um professor sênior de programação com vasta experiência em ensino técnico.
 
-Transforme a ideia do usuário em um prompt artístico e detalhado.
+Seu papel é ensinar com clareza, didática e profundidade.
 
-Responda somente em Markdown:
+Antes de responder, considere:
 
-# 🎨 Conceito Central
-Explique a ideia principal.
+- Stack / linguagem informada
+- Nível do aluno (iniciante, intermediário, avançado)
+- Tipo de dúvida (conceito, erro, arquitetura, projeto, carreira)
+- Se é para criar plano de estudo ou resolver problema específico
 
-# 🌍 Ambientação
-Descreva cenário, época e atmosfera.
+Siga sempre esta estrutura:
 
-# 👤 Personagens (se houver)
-Detalhes psicológicos e físicos.
+# 🎓 Diagnóstico
+Explique o que o aluno precisa entender antes de resolver o problema.
 
-# ✍️ Estilo Literário
-Indique referências de estilo (ex: poético, épico, minimalista).
+# 🧠 Conceito Fundamental
+Explique a base teórica com exemplos simples.
 
-# 🎭 Emoção Dominante
-Qual sentimento deve prevalecer.
+# 🛠 Aplicação Prática
+Mostre código comentado passo a passo.
 
-# 📖 Estrutura Narrativa
-Início, desenvolvimento e clímax.
+# ⚠️ Erros Comuns
+Liste armadilhas que iniciantes costumam cometer.
 
-# 📏 Limitações
-Tamanho, formato ou restrições criativas.
+# 🚀 Próximo Nível
+Sugira como evoluir no tema.
 
-Não escreva nada fora do Markdown.
+Se for pedido um plano de estudo:
+
+# 📚 Rota de Aprendizado
+- Fundamentos
+- Projetos práticos
+- Ferramentas
+- Exercícios recomendados
+- Nível de progressão
+
+Use linguagem didática, como um professor de tecnologia.
+Explique o "porquê" antes do "como".
+Nunca apenas entregue código sem contexto.
+Adapte profundidade conforme o nível informado.
 """
 PROMPT_CONTEUDO = """
 Você é um especialista em engenharia de prompts focado em criação de conteúdo.
@@ -191,16 +218,16 @@ def gerar_prompt_analise_dados(ideia_usuario):
         contents=f"{PROMPT_ANALISE_DADOS}\n\nIdeia do usuário:{ideia_usuario}"
     )
     return resposta.text
-def gerar_prompt_machine_learning(ideia_usuario):
+def gerar_prompt_sheetmaster(ideia_usuario):
     resposta = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=f"{PROMPT_MACHINE_LEARNING}\n\nIdeia do usuário:{ideia_usuario}"
+        contents=f"{PROMPT_ESPECIALISTA_SHEETS}\n\nIdeia do usuário:{ideia_usuario}"
     )
     return resposta.text
-def gerar_prompt_texto_criativo(ideia_usuario):
+def gerar_prompt_professor_programacao(ideia_usuario):
     resposta = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=f"{PROMPT_TEXTO_CRIATIVO}\n\nIdeia do usuário:{ideia_usuario}"
+        contents=f"{PROMPT_PROFESSOR_PROGRAMACAO}\n\nIdeia do usuário:{ideia_usuario}"
     )
     return resposta.text
 def gerar_prompt_conteudo(ideia_usuario):
@@ -213,16 +240,14 @@ def mostrar_menu():
     table = Table(title="🎯 PromptMaster")
     table.add_column("Opção",style="cyan")
     table.add_column("Descrição", style="magenta")
-    table.add_row("1", "Prompt para construção de conteúdo")
+    table.add_row("1", "Prompt para construção de aplicação (Completo)")
     table.add_row("2", "Prompt para análise de dados")
-    table.add_row("3", "Prompt para aprendizado de máquina")
-    table.add_row("4", "Gerar texto criativo")
+    table.add_row("3", "Prompt SheetMaster")
+    table.add_row("4", "Professor de Programação")
     table.add_row("5", "Gerar prompt para criação de conteúdo")
     table.add_row("0", "Sair")
     console.print(table)
     
-
-print("Programa iniciado")
 if __name__ =="__main__":
     while True:
         mostrar_menu()
@@ -241,12 +266,12 @@ if __name__ =="__main__":
                 console.print(prompt_gerado)
             case "3":
                 ideia=input("Digite sua ideia para aprendizado de máquina: ")
-                prompt_gerado = gerar_prompt_machine_learning(ideia)
+                prompt_gerado = gerar_prompt_sheetmaster(ideia)
                 console.print("\nPrompt Gerado:\n")
                 console.print(prompt_gerado)
             case "4":
-                ideia=input("Digite sua ideia para texto criativo: ")
-                prompt_gerado = gerar_prompt_texto_criativo(ideia)
+                ideia=input("Digite sua ideia para professor de programação: ")
+                prompt_gerado = gerar_prompt_professor_programacao(ideia)
                 console.print("\nPrompt Gerado:\n")
                 console.print(prompt_gerado)
             case "5":
