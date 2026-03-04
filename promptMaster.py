@@ -1,28 +1,27 @@
 import os
+import datetime
+import typer
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 from colorama import Fore, Style, init
 from google import genai
 from supabase import create_client, Client
-import datetime
 
 
 
-
-import typer
-
+#====Configs iniciais====
 load_dotenv()
 init(autoreset=True)
 console = Console()
 app = typer.Typer() # verify
-#===== inicializando gemini ======
+
+##===== Iniciando Clients ======
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-##===== Inicializa Supabase ======
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 supabase:Client=create_client(SUPABASE_URL,SUPABASE_KEY)
-
+##==============================
 SISTEM_PROMPT_BUILD = """
 Você é um especialista em engenharia de prompts.
 
@@ -214,35 +213,37 @@ Limitações de tamanho, linguagem ou regras específicas.
 Não explique nada fora do Markdown.
 """
 
-def iniciar_sessao_banco():
+def iniciar_sessao_banco(): 
     """Cria um usuario falso (para CLI) e inicia um novo projeto/sessao"""
     email_cli="cli@promptmaster.local"
-
+    #1. verifica ou cria user
     user_res = supabase.table("users").select("id").eq("email", email_cli).execute()
     if not user_res.data:
         user_res=supabase.table("users").insert({"email":email_cli}).execute()
+
     user_id=user_res.data[0]["id"]
-
     titulo = f"Sessão CLI - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
+    #2. cria o projeto/sessao
     proj_res = supabase.table("projects").insert({
         "user_id":user_id,
         "title":titulo,
-        "memory_sumary":"Nenhum resumo ainda"
+        "memory_summary":"Inicio da conversa"
     }).execute()
-
     project_id=proj_res.data[0]["id"]
-    console.print(f"[bold green]Sessão iniciada com sucesso![/bold green] (ID: {project_id[:8]}...)")
-    return project_id, proj_res.data[0]["memory_sumary"]
-def salvar_mensagem(project_id:str, role:str, content:str):
-    """Salva a mensagem no banco de dados"""
-    supabase.table("promppts").insert({
+    memory_summary=proj_res.data[0]["memory_summary"]
+    console.print(f"[bold green]Sessão iniciada com sucesso![/bold green] (ID: {project_id[:8]})")
+    return project_id, memory_summary
+
+def salvar_mensagem(project_id:str, role:str, content:str): 
+    """Salva a mensagem no banco de dados (tabela prompts)"""
+    supabase.table("prompts").insert({
         "project_id":project_id,
         "role":role,
         "content":content
     }).execute()
+    
 def buscar_ultima_mensagem(project_id:str):
-    """Busca apenas a ultima troca de mensagens (User + Assistant) para economizar tokens e manter contexto recente"""
+    """Busca as últimas interações para dar contexto à IA"""
     res = supabase.table("prompts").select("*").eq("project_id",project_id).order("created_at", desc=True).limit(2).execute()
 
     if not res.data:
@@ -253,23 +254,17 @@ def buscar_ultima_mensagem(project_id:str):
     for msg in mensagens:
         papel = "Usuario" if msg["role"] == "user" else "IA"
         contexto += f"{papel}: {msg['content']}\n"
-
     return contexto
-def gerar_resposta_com_contexto(project_id, memory_sumary,system_prompt, ideia_usuario):
-    """
-    Aplica a regra da imagem:
-    1. Persona (System)
-    2. Memory Summary
-    3. Última interação
-    4. Nova instrução
-    """
+
+def gerar_resposta_com_contexto(project_id, memory_summary,system_prompt, ideia_usuario):
+    """Executa a lógica de IA com histórico do Banco de Dados"""
     ultima_interacao = buscar_ultima_mensagem(project_id)
     prompt_final = f"""
     [PERSONA ATIVA]
     {system_prompt}
 
     [RESUMO DA MEMÓRIA]
-    {memory_sumary}
+    {memory_summary}
 
     [ÚLTIMA INTERAÇÃO RELEVANTE]
     {ultima_interacao}
@@ -281,9 +276,13 @@ def gerar_resposta_com_contexto(project_id, memory_sumary,system_prompt, ideia_u
         model="gemini-2.5-flash",
         contents=prompt_final
     )
+    texto_resposta = resposta.text
+    #Atualiza a memória sumária do projeto (pode ser melhorado com técnicas de resumo ou filtragem de informações relevantes)
     salvar_mensagem(project_id, "user", ideia_usuario)
     salvar_mensagem(project_id, "assistant", resposta.text)
-    return resposta.text
+
+    return texto_resposta
+
 def gerar_prompt_build(ideia_usuario):
     resposta = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -318,37 +317,49 @@ def mostrar_menu():
     table = Table(title="🎯 PromptMaster (Conectado ao DB)")
     table.add_column("Opção",style="cyan")
     table.add_column("Descrição", style="magenta")
-    table.add_row("1", "Prompt para construção de aplicação (Completo)")
-    table.add_row("2", "Prompt para análise de dados")
-    table.add_row("3", "Prompt SheetMaster")
+    table.add_row("1", "Construção de Aplicação")
+    table.add_row("2", "Análise de Dados")
+    table.add_row("3", "SheetMaster")
     table.add_row("4", "Professor de Programação")
-    table.add_row("5", "Gerar prompt para criação de conteúdo")
+    table.add_row("5", "Criação de Conteúdo")
     table.add_row("0", "Sair")
     console.print(table)
     
 if __name__ =="__main__":
+    id_project, memory_summary = iniciar_sessao_banco()
+
     while True:
         mostrar_menu()
 
-        opcao = input("Escolha uma opção (1-5): ")
-        persona=""
-        if opcao == "1":
-            persona=SISTEM_PROMPT_BUILD
-        elif opcao == "2":
-            persona=PROMPT_ANALISE_DADOS
-        elif opcao == "3":
-            persona=PROMPT_ESPECIALISTA_SHEETS
-        elif opcao == "4":
-            persona=PROMPT_PROFESSOR_PROGRAMACAO
-        elif opcao == "5":
-            persona=PROMPT_CONTEUDO
-        elif opcao == "0":
-            console.print("[bold green]Encerrando o programa.[/bold green]")
+        opcao = input("Escolha uma opção (1-5 ou 0): ")
+        if opcao=="0":
+            console.print("[bold green]Encerrando e salvando sessão...[/bold green]")
             break
+        personas={
+            "1": (SISTEM_PROMPT_BUILD),
+            "2": (PROMPT_ANALISE_DADOS),
+            "3": (PROMPT_ESPECIALISTA_SHEETS),
+            "4": (PROMPT_PROFESSOR_PROGRAMACAO),
+            "5": (PROMPT_CONTEUDO)
+        }
+        if opcao in personas:
+            persona_escolhida=personas[opcao]
+            ideia = input("Digite sua ideia: ")
+
+            with console.status("[bold yellow]IA pensando e consultando banco de dados...[/bold yellow]"):
+
+                resultado = gerar_resposta_com_contexto(
+                    id_project,
+                    memory_summary,
+                    persona_escolhida,
+                    ideia
+                )
+            console.print("\n[bold cyan]✨ Resposta Gerada:[/bold cyan]")
+            console.print(resultado)
+            console.print("\n" + "-"*50)
         else:
             console.print("[bold red]Opção inválida. Por favor, escolha uma opção entre 0 e 5.[/bold red]")
-            continue
-        ideia = input("Digite sua ideia: ")
+
         
 
 
