@@ -215,7 +215,107 @@ Limitações de tamanho, linguagem ou regras específicas.
 
 Não explique nada fora do Markdown.
 """
+PROMPT_FRONTEND_SENIOR = """
+Você é um engenheiro Frontend Sênior com experiência em construção de aplicações web modernas e escaláveis.
 
+Possui domínio em:
+- Arquitetura de Frontend
+- React / Next.js
+- Componentização
+- Design Systems
+- UX/UI
+- Performance Web
+- Acessibilidade (a11y)
+- State management
+- Integração com APIs
+- Organização de código escalável
+
+Sua função é transformar ideias em PROMPTS PROFISSIONAIS para desenvolvimento de interfaces frontend.
+
+Sempre responda em Markdown estruturado seguindo este modelo:
+
+# 🎯 Objetivo da Interface
+Explique claramente o que a interface deve fazer e qual problema resolve.
+
+# 👤 Usuário e Contexto
+Descreva:
+- tipo de usuário
+- cenário de uso
+- dispositivo principal (desktop, mobile ou ambos)
+
+# 🧠 Estratégia de UX
+Defina:
+- fluxo principal do usuário
+- ações principais
+- simplicidade de uso
+- feedback visual
+
+# 🏗 Arquitetura Frontend
+Sugira:
+- framework (React, Next.js, Vue etc.)
+- organização de pastas
+- separação de componentes
+- gerenciamento de estado
+
+# 🧩 Componentes Principais
+Liste os principais componentes da interface.
+
+Exemplo:
+- Navbar
+- Sidebar
+- Dashboard
+- Cards
+- Forms
+- Modais
+
+Explique a função de cada componente.
+
+# 🎨 Diretrizes de UI
+Defina:
+- estilo visual
+- tipografia
+- espaçamento
+- cores
+- responsividade
+
+Se aplicável, sugerir uso de:
+- Tailwind
+- Material UI
+- Shadcn UI
+- Design System próprio
+
+# ⚡ Performance
+Incluir recomendações como:
+- lazy loading
+- memoização
+- divisão de componentes
+- otimização de renderização
+
+# ♿ Acessibilidade
+Garantir:
+- navegação por teclado
+- contraste adequado
+- uso correto de aria-labels
+
+# 🔗 Integração com Backend
+Definir como a interface deve consumir APIs.
+
+Exemplo:
+- REST
+- GraphQL
+- autenticação
+- tratamento de erros
+
+# 📄 Estrutura do Projeto
+Forneça uma sugestão de estrutura de diretórios.
+
+# 🚀 Melhorias Futuras
+Sugira possíveis evoluções da interface.
+
+Responda apenas em Markdown.
+Não explique nada fora da estrutura.
+Produza prompts claros, técnicos e prontos para serem usados em IAs de geração de código.
+"""
 def iniciar_sessao_banco(): 
     """Cria um usuario falso (para CLI) e inicia um novo projeto/sessao"""
     email_cli="cli@promptmaster.local"
@@ -346,6 +446,13 @@ def gerar_prompt_conteudo(ideia_usuario):
         contents=f"{PROMPT_CONTEUDO}\n\nIdeia do usuário:{ideia_usuario}"
     )
     return resposta.text
+def gerar_prompt_frontend(ideia_usuario):
+    resposta = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=f"{PROMPT_FRONTEND_SENIOR}\n\nIdeia do usuário:{ideia_usuario}"
+    )
+    return resposta.text
+
 def mostrar_menu():
     table = Table(title="🎯 PromptMaster - Hub de Inteligência")
     table.add_column("Opção", style="cyan")
@@ -356,9 +463,11 @@ def mostrar_menu():
     table.add_row("3", "SheetMaster", "Crie prompts para automação e análise em planilhas")
     table.add_row("4", "Professor de Programação", "Desenvolva prompts para ensino e aprendizado de programação")
     table.add_row("5", "Criação de Conteúdo", "Gere prompts para criação de conteúdo informativo e educativo")
+    table.add_row("6", "Geracao de FrontEnd", "Gere prompts para criação de codigo frontend")
+
     #table.add_row("1-5", "Persona", "Criar algo do zero com uma Persona")
-    table.add_row("6", "INCREMENTAR", "Melhorar/Evoluir o último resultado gerado"),
-    table.add_row("7", "Histórico", "Exibir histórico de interações desta sessão")
+    table.add_row("7", "INCREMENTAR", "Melhorar/Evoluir o último resultado gerado"),
+    table.add_row("8", "Histórico", "Exibir histórico de interações desta sessão")
     table.add_row("0", "Sair", "Encerrar sessão")
     console.print(table)
 def listar_historico(project_id:str):
@@ -406,21 +515,22 @@ if __name__ =="__main__":
 
 while True:
     mostrar_menu()
-    opcao = input("Escolha uma opção (0-6): ")
+    opcao = input("Escolha uma opção (0-8): ")
 
     match opcao:
         case "0":
             console.print("[bold green]Encerrando...[/bold green]")
             break
 
-        case "1" | "2" | "3" | "4" | "5":
+        case "1" | "2" | "3" | "4" | "5"| "6":
             # TUDO isso aqui deve estar indentado para dentro deste case
             personas = {
                 "1": SISTEM_PROMPT_BUILD,
                 "2": PROMPT_ANALISE_DADOS,
                 "3": PROMPT_ESPECIALISTA_SHEETS,
                 "4": PROMPT_PROFESSOR_PROGRAMACAO,
-                "5": PROMPT_CONTEUDO
+                "5": PROMPT_CONTEUDO,
+                "6": PROMPT_FRONTEND_SENIOR
             }
             persona_escolhida = personas[opcao]
             ideia = input("\n💡 Digite sua ideia inicial: ")
@@ -429,7 +539,7 @@ while True:
                 resultado = gerar_resposta_com_contexto(id_project, memory_summary, persona_escolhida, ideia)
             console.print(f"\n[bold cyan]✨ Resultado:[/bold cyan]\n{resultado}")
 
-        case "6":
+        case "7":
             # Remova o 'pass' e coloque a lógica da PONTE aqui
             ultimo_contexto = buscar_ultimo_resultado_ia(id_project)
             
@@ -443,7 +553,7 @@ while True:
             with console.status("[bold blue]Incrementando...[/bold blue]"):
                 resultado = gerar_resposta_com_contexto(id_project, memory_summary, prompt_ponte, ideia_incremento)
             console.print(f"\n[bold green]🚀 Resultado Incrementado:[/bold green]\n{resultado}")
-        case "7":
+        case "8":
             listar_historico(id_project)
 
         case _: # O 'default' (opção inválida)
