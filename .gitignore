@@ -20,3 +20,5 @@ dist/
 # Configurações de IDE
 .vscode/
 .idea/
+.venv
+venvP/

@@ -1,0 +1,47 @@
+# 🎉 PromptMaster: Arquitetura e Plano de Implementação
+
+Este documento centraliza as decisões de arquitetura de software e escolhas visuais aprovadas para elaboração do **PromptMaster** no ambiente front-end. O projeto será gerado logo após a aprovação deste esqueleto.
+
+## User Review Required
+> [!IMPORTANT]
+> A seguir as confirmações definitivas extraídas do Brainstorming:
+> 1. Autenticação via **httpOnly Cookie** configurado corretamente para prevenção severa de ataques XSS.
+> 2. Identidade Visual sob a temática **Brutalismo / Technical Theme** (Estética crua, tons escuros pesados, acentos em verde técnico suave, tipografia assertiva e bordas em 90 graus sem arredondamento).
+> 3. Controle preventivo sobre a edição de prompts utilizando **hibridismo de Auto-Save via Caching Local** (`localStorage`/`IndexDB` via Zustand) antes do sync com o servidor final.
+
+Verifique se a estratégia abaixo está alinhada ao que você deseja que os agentes de código executem.
+
+## Proposed Changes
+
+### 🏗️ Arquitetura Core e Scaffold Tooling
+Iniciaremos via CLI o boilerplate padrão do framework com modificações para escalabilidade:
+- **[NEW] `src/app/`**: Rotas em paradigma **Next.js App Router** suportando SSR pesado.
+- **[NEW] `src/lib/api.ts`**: Cliente via Axios pré-programado para embutir headers HTTP padrão visando tráfego inter-domínio seguro (`withCredentials: true` para lidar com cookies HttpOnly).
+- **[NEW] `src/Providers.tsx`**: Ponto único no topo da árvore de renders injetando provedores de estado assíncrono (**TanStack Query**) e ThemeWrappers do Tailwind.
+
+### 🎨 Design Tokens & UI Architecture (O Tema Brutalista)
+Reconfiguraremos o **Tailwind CSS (`tailwind.config.ts`) e o arquivo global (`globals.css`)**:
+- **[NEW] Variáveis Neutras e Base de Fundo**: Telas atuarão sobre variações de pretos absolutos (`#0f0f0f`) até cinzas ardósia `#1c1c1c` para contraste nos painéis (`border-neutral-800`).
+- **[NEW] Acento Verde-Técnico (`--color-primary`)**: Uma coloração puxada para um `#4ade80` (suave porém "terminal-like") sem glow/blur exagerado. Utilizado estrategicamente no estado `:hover` e avisos de confirmação de status.
+- **[MODIFY] Fuga do Clichê**: O Shadcn UI será purificado. ZERAREMOS rigorosamente o raio natural das caixas configurando `--radius: 0`. Os botões (`src/components/ui/button.tsx`) apresentarão retângulos fiéis e minimalistas.
+- **[NEW] Topologia "IDE Clássica"**: Proibição do layout padrão *Split (50/50)*. Em vez de interfaces arredondadas "SaaS genéricas", os componentes interagirão sob tensão assimétrica e bordas brutas, provendo sensação de alta estabilidade e utilidade técnica.
+
+### 💾 Engrenagem Híbrida Zustand (Gerenciamento Anti-Falha)
+A área crítica onde os desenvolvedores escrevem e redigem longos Prompts ganhará uma sobre-capa arquitetural:
+- **[NEW] `src/features/prompts/stores/usePromptDraftStore.ts`**: Container Zustand dedicado, reagindo a alterações nas *textareas* e inputs com *debounce*.
+- Os dados do draft serão serializados sob sua assinatura para o Storage Local do navegador sem estressar a API.
+- Se a página sofrer recarregamento acidental (F5, quebra de energia, rede intermitente), o layout intercepta o Mount (`useEffect`) recuperando fielmente do indexador de persistência para a tela. O prompt só será consolidado (`MUTATE` via React Query) se passar no submit manual na própria sessão.
+
+## Verification Plan
+
+Para garantirmos a entrega correta do framework desenhado, utilizaremos:
+
+### Automated Tests/Checks
+- Validação agressiva de Build Next.js com checagem TypeScript rígida (`npx tsc --noEmit`).
+- Inspeção Lint via `npm run lint`.
+- Passagem do projeto no script de Auditoria (se acessível no kit, tal como `checklist.py`) cobrindo as boas métricas Web Vitals, Acessibilidade ARIA e UX.
+
+### Manual Verification
+- **Verificação Tátil:** Testar navegação dos controles UI por teclado sem perdas de foco numéricas ou encadeamentos de modais com erros cegos (Teste de Acessibilidade 1.0).
+- **Hard-Testing do Hibridismo de Auto-Save:** Forçar desconexão ou recarregamento compulsório no meio da digitação de um novo Prompt complexo. Devemos exigir que o estado retorne incólume do Caching Front-end no próximo *Load*.
+- **Inspeção de Radius-0:** O Auditor Front-end (Maestro) revisará ocularmente todos os cartões (PromptCards, Modais, Inputs) proibindo que haja resquício de cantos arredondados, confirmando a robustez visual técnica.

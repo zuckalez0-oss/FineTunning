@@ -1,0 +1,9 @@
+[project]
+name = "promptmaster-backend"
+version = "1.0.0"
+description = "PromptMaster backend API"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
